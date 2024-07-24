@@ -32,6 +32,8 @@ import { useCreateWhistleblowing } from "../_hooks/useCreateWhistleblowing";
 import { GET_WHISTLEBLOWINGS } from "../_hooks/useGetWhistleblowings";
 import { createFormData } from "@/utils/form-data";
 import dynamic from "next/dynamic";
+import { getAddressByLatLng } from "@/lib/longdo-map";
+import { splitAttachment } from "@/utils/split-attchment";
 
 type TicketFormProps = {};
 
@@ -78,9 +80,14 @@ const TicketForm = (props: TicketFormProps) => {
   });
 
   const watchLatLng = form.watch("latLng");
+  const watchType = form.watch("type");
 
   const onSubmit = async (data: any) => {
-    const formData = createFormData(data);
+    const { files: images } = splitAttachment(data.images);
+
+    data.images = images;
+
+    const formData = createFormData(data, true);
 
     createWhistleblowing(formData, {
       onSuccess: () => {
@@ -98,11 +105,18 @@ const TicketForm = (props: TicketFormProps) => {
     });
   };
 
-  const handleSelectMap = (place: any) => {
-    console.log("🚀 ~ handleSelectMap ~ place:", place);
+  const handleSelectMap = async (place: any) => {
     const latLng = `${place.lat},${place.lon}`;
 
+    const addressInfoResponse = await getAddressByLatLng(place.lat, place.lon);
+    const addressInfo = await addressInfoResponse.json();
+
     form.setValue("latLng", latLng);
+    form.setValue("addressRoad", addressInfo.road);
+    form.setValue("addressDistrict", addressInfo.district);
+    form.setValue("addressSubDistrict", addressInfo.subdistrict);
+    form.setValue("addressProvince", addressInfo.province);
+    form.setValue("addressZipCode", addressInfo.postcode);
 
     handleCloseMapDialog();
   };
@@ -122,7 +136,10 @@ const TicketForm = (props: TicketFormProps) => {
         open={openMapDialog}
         onClose={handleCloseMapDialog}
       />
-      <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
+      <form
+        className="space-y-4 overflow-y-scroll h-[calc(100vh-15rem)]"
+        onSubmit={form.handleSubmit(onSubmit)}
+      >
         <FormGroup title="เรื่องที่แจ้งเหตุ">
           <SelectField
             required
@@ -135,10 +152,6 @@ const TicketForm = (props: TicketFormProps) => {
                 label: "สัตว์ป่าสร้างความเดือดร้อน",
               },
               {
-                value: "เสือเกิด/เสือตาย",
-                label: "เสือเกิด/เสือตาย",
-              },
-              {
                 value: "การล่า/ครอบครอง/ค้าสัตว์ป่า",
                 label: "การล่า/ครอบครอง/ค้าสัตว์ป่า",
               },
@@ -149,6 +162,10 @@ const TicketForm = (props: TicketFormProps) => {
               {
                 value: "การบุกรุกตัดไม้ทำลายป่า",
                 label: "การบุกรุกตัดไม้ทำลายป่า",
+              },
+              {
+                value: "สอบถาม",
+                label: "สอบถาม",
               },
               {
                 value: "อื่นๆ",
@@ -172,102 +189,109 @@ const TicketForm = (props: TicketFormProps) => {
             required
           />
         </FormGroup>
-        <FormGroup title="สถานที่เกิดเหตุ">
-          <FormField
-            control={form.control}
-            name="latLng"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>
-                  ตำแหน่ง GPS <span className="text-red-500">*</span>
-                </FormLabel>
-                <FormControl>
-                  <div className="flex justify-around items-center gap-4">
-                    <Input placeholder="กรอกข้อมูล" {...field} />
-                    <Button
-                      type="button"
-                      className="text-[#27A14F] text-xs w-auto space-x-1"
-                      variant="outline"
-                      onClick={() => handleOpenMapDialog()}
-                    >
-                      <FaLocationCrosshairs />
-                      <span>ค้นหาตำแหน่งปัจจุบัน</span>
-                    </Button>
-                  </div>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          {watchLatLng && (
-            <div className="h-[250px] w-full">
-              <Map
-                position={convertLatLngStrToArray(form.getValues("latLng"))}
+        {watchType !== "สอบถาม" && (
+          <>
+            <FormGroup title="สถานที่เกิดเหตุ">
+              <FormField
+                control={form.control}
+                name="latLng"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      ตำแหน่ง GPS <span className="text-red-500">*</span>
+                    </FormLabel>
+                    <FormControl>
+                      <div className="flex justify-around items-center gap-4">
+                        <Input placeholder="กรอกข้อมูล" {...field} />
+                        <Button
+                          type="button"
+                          className="text-[#27A14F] text-xs w-auto space-x-1"
+                          variant="outline"
+                          onClick={() => handleOpenMapDialog()}
+                        >
+                          <FaLocationCrosshairs />
+                          <span>ค้นหาตำแหน่งปัจจุบัน</span>
+                        </Button>
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-          )}
-          <InputField
-            label="บริเวณสถานที่"
-            name="location"
-            placeholder="เบอร์ติดต่อ"
-            required
-          />
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <InputField
-              label="บ้านเลขที่"
-              name="addressNumber"
-              placeholder="เลขที่"
-              required
-            />
-            <InputField
-              label="หมู่"
-              name="addressMoo"
-              placeholder="หมู่"
-              required
-            />
-            <InputField
-              label="ถนน"
-              name="addressRoad"
-              placeholder="ถนน"
-              required
-            />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <InputField
-              label="ตำบล"
-              name="addressSubDistrict"
-              placeholder="ตำบล"
-              required
-            />
-            <InputField
-              label="อำเภอ"
-              name="addressDistrict"
-              placeholder="อำเภอ"
-              required
-            />
-            <InputField
-              label="จังหวัด"
-              name="addressProvince"
-              placeholder="จังหวัด"
-              required
-            />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <InputField
-              label="รหัสไปรษณีย์"
-              name="addressZipCode"
-              placeholder="รหัสไปรษณีย์"
-              required
-            />
-            <InputField
-              label="วัน/เดือน/ปี"
-              name="date"
-              placeholder="วัน/เดือน/ปี"
-              required
-            />
-            <InputField label="เวลา" name="time" placeholder="เวลา" required />
-          </div>
-        </FormGroup>
+              {watchLatLng && (
+                <div className="h-[250px] w-full">
+                  <Map position={convertLatLngStrToArray(watchLatLng)} />
+                </div>
+              )}
+              <InputField
+                label="บริเวณสถานที่"
+                name="location"
+                placeholder="บริเวณสถานที่"
+                required
+              />
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <InputField
+                  label="บ้านเลขที่"
+                  name="addressNumber"
+                  placeholder="เลขที่"
+                  required
+                />
+                <InputField
+                  label="หมู่"
+                  name="addressMoo"
+                  placeholder="หมู่"
+                  required
+                />
+                <InputField
+                  label="ถนน"
+                  name="addressRoad"
+                  placeholder="ถนน"
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <InputField
+                  label="ตำบล"
+                  name="addressSubDistrict"
+                  placeholder="ตำบล"
+                  required
+                />
+                <InputField
+                  label="อำเภอ"
+                  name="addressDistrict"
+                  placeholder="อำเภอ"
+                  required
+                />
+                <InputField
+                  label="จังหวัด"
+                  name="addressProvince"
+                  placeholder="จังหวัด"
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <InputField
+                  label="รหัสไปรษณีย์"
+                  name="addressZipCode"
+                  placeholder="รหัสไปรษณีย์"
+                  required
+                />
+                <InputField
+                  label="วัน/เดือน/ปี (02/01/2567)"
+                  name="date"
+                  placeholder="วัน/เดือน/ปี"
+                  required
+                />
+                <InputField
+                  label="เวลา (13:00:00)"
+                  name="time"
+                  placeholder="เวลา"
+                  required
+                />
+              </div>
+            </FormGroup>
+          </>
+        )}
         <FormGroup title="รายละเอียดการแจ้งเหตุ">
           <InputField
             label="ชื่อเรื่อง"

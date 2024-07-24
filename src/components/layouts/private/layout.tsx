@@ -21,11 +21,11 @@ const PrivateLayout = ({ children }: PrivateLayoutProps) => {
   };
 
   return (
-    <>
+    <div className="flex flex-col h-full">
       <Navbar menus={menus} handleSignOut={handleSignOut} />
       <SideBar menus={menus} handleSignOut={handleSignOut} />
-      <div className="px-4 py-2 md:ml-64 mt-20 max-h-screen">{children}</div>
-    </>
+      <div className="px-4 py-2 md:ml-64 mt-20 overflow-hidden">{children}</div>
+    </div>
   );
 };
 

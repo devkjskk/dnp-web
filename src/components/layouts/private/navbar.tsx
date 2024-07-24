@@ -23,9 +23,7 @@ const Navbar = ({ menus, handleSignOut }: NavbarProps) => {
   return (
     <nav
       className="fixed top-0 w-full bg-primary border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700"
-      style={{
-        zIndex: 9999,
-      }}
+      style={{ zIndex: 50 }}
     >
       <div className="px-3 py-3 lg:px-5 lg:pl-3">
         <div className="flex items-center justify-between">

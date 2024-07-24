@@ -19,6 +19,8 @@ export type Ticket = {
   addressZipCode: string;
   date: string;
   time: string;
+  images: any[];
+  isVolunteer: boolean;
   createdAt: Date;
   updatedAt: Date;
 };

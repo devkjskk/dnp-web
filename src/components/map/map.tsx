@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
@@ -10,6 +10,7 @@ import "leaflet-defaulticon-compatibility";
 import { search } from "@/lib/longdo-map";
 import { Input } from "../ui/input";
 import { ScrollArea } from "../ui/scroll-area";
+import { Button } from "../ui/button";
 
 type MapProps = {
   position: [number, number];
@@ -18,16 +19,43 @@ type MapProps = {
   searchable?: boolean;
 };
 export function Map({ position, zoom = 16, onSelect, searchable }: MapProps) {
+  const [pos, setPos] = useState(position);
   const [places, setPlaces] = useState([]);
   const [loadingPlaces, setLoadingPlaces] = useState(false);
-  const [searchText, setSearchText] = useState("");
+  const [tmpSearchText, setTmpSearchText] = useState("");
+  const [selectedPlace, setSelectedPlace] = useState<any>(null);
+  const markerRef = useRef<any>(null);
 
-  const handleSearch = async (searchText: string) => {
-    setSearchText(searchText);
+  useEffect(() => {
+    setPos(position);
+  }, [position]);
+
+  const eventHandlers = useMemo(
+    () => ({
+      dragend() {
+        const marker = markerRef.current;
+        if (marker != null) {
+          setPos(marker.getLatLng());
+
+          setSelectedPlace({
+            lat: marker.getLatLng().lat,
+            lon: marker.getLatLng().lng,
+          });
+        }
+      },
+    }),
+    []
+  );
+
+  const onChange = (e: any) => {
+    setTmpSearchText(e.target.value);
+  };
+
+  const handleSearch = async () => {
     setLoadingPlaces(true);
 
     try {
-      const response = await search(searchText);
+      const response = await search(tmpSearchText);
       const { data } = await response.json();
 
       const places = data.filter((place: any) => place.lat && place.lon);
@@ -40,17 +68,21 @@ export function Map({ position, zoom = 16, onSelect, searchable }: MapProps) {
   };
 
   const handleSelect = (place: any) => {
-    setSearchText(place.name);
+    setTmpSearchText(place.name);
+    setSelectedPlace(place);
+  };
 
-    if (onSelect) {
-      onSelect(place);
+  const handleConfirm = () => {
+    if (onSelect && selectedPlace) {
+      onSelect(selectedPlace);
+      setSelectedPlace(null);
     }
   };
 
   return (
     <div className="w-full h-full">
       <MapContainer
-        center={position}
+        center={pos}
         zoom={zoom}
         scrollWheelZoom={true}
         className="w-full h-full"
@@ -59,13 +91,14 @@ export function Map({ position, zoom = 16, onSelect, searchable }: MapProps) {
         }}
       >
         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-        <Marker position={position}>
-          <Popup>
-            ตำแหน่งที่ตั้ง
-            <br />
-            ละติจูด: {position[0]}
-            <br />
-            ลองจิจูด: {position[1]}
+        <Marker
+          position={pos}
+          draggable
+          eventHandlers={eventHandlers}
+          ref={markerRef}
+        >
+          <Popup minWidth={90}>
+            <span>ตำแหน่งปัจจุบัน</span>
           </Popup>
         </Marker>
       </MapContainer>
@@ -76,17 +109,23 @@ export function Map({ position, zoom = 16, onSelect, searchable }: MapProps) {
             zIndex: 1000,
           }}
         >
-          <Input
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                handleSearch(searchText);
-              }
-            }}
-            className="bg-white"
-            placeholder="ค้นหาสถานที่..."
-            value={searchText}
-          />
-          <ScrollArea className="bg-white rounded-lg mt-1 max-h-48 h-auto">
+          <div className="flex items-center space-x-2">
+            <Input
+              onChange={onChange}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  handleSearch();
+                }
+              }}
+              className="bg-white"
+              placeholder="ค้นหาสถานที่..."
+              value={tmpSearchText}
+            />
+            <Button onClick={handleConfirm} disabled={!selectedPlace}>
+              เลือกตำแหน่งนี้
+            </Button>
+          </div>
+          <ScrollArea className="bg-white rounded-lg mt-1 max-h-48 h-auto bg-opacity-70">
             <ul>
               {loadingPlaces ? (
                 <li className="text-sm text-gray-200 flex justify-center">

@@ -14,35 +14,29 @@ import { useSearch } from "@/hooks/useSearch";
 
 const TicketPage = () => {
   const { searchValue, handleSearch } = useSearch();
+  const [openDrawer, setOpenDrawer] = React.useState(false);
   const [action, setAction] = React.useState("");
   const [selectedTicket, setSelectedTicket] = React.useState<Ticket | null>(
     null
   );
 
-  const openSlide = () => {
-    const slide = document.querySelector(".slide");
-
-    if (!slide) return;
-
-    slide.classList.remove("translate-x-full");
+  const handlerOpenDrawer = () => {
+    setOpenDrawer(true);
   };
 
-  const closeSlide = () => {
-    const slide = document.querySelector(".slide");
-
-    if (!slide) return;
-
-    slide.classList.add("translate-x-full");
+  const handleCloseDrawer = () => {
+    setOpenDrawer(false);
+    setSelectedTicket(null);
   };
 
   const handleAction = (action: string) => {
     setAction(action);
-    openSlide();
+    handlerOpenDrawer();
   };
 
   const handleSelectTicket = (ticket: Ticket) => {
     setAction("view");
-    openSlide();
+    handlerOpenDrawer();
 
     setSelectedTicket(ticket);
   };
@@ -68,29 +62,33 @@ const TicketPage = () => {
         </div>
         <TicketList onSelect={handleSelectTicket} search={searchValue} />
       </div>
-      <Card className="slide transition-transform duration-300 ease-in-out translate-x-full">
-        <CardHeader>
-          <div className="flex justify-between">
-            <CardTitle className="text-2xl">
-              แจ้งเหตุเหตุศูนย์สายด่วนพิทักษ์ป่า 1362
-            </CardTitle>
-            <Button
-              size="icon"
-              onClick={() => closeSlide()}
-              variant="ghost"
-              className="rounded-full"
-            >
-              <MdOutlineClose className="w-6 h-6" />
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {action === "add" && <TicketForm />}
-          {action === "view" && selectedTicket && (
-            <TicketInfoCard ticket={selectedTicket} />
-          )}
-        </CardContent>
-      </Card>
+      {openDrawer ? (
+        <Card className="h-auto">
+          <CardHeader>
+            <div className="flex justify-between">
+              <CardTitle className="text-2xl">
+                แจ้งเหตุเหตุศูนย์สายด่วนพิทักษ์ป่า 1362
+              </CardTitle>
+              <Button
+                size="icon"
+                onClick={() => handleCloseDrawer()}
+                variant="ghost"
+                className="rounded-full"
+              >
+                <MdOutlineClose className="w-6 h-6" />
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {action === "add" && <TicketForm />}
+            {action === "view" && selectedTicket && (
+              <div className="overflow-y-scroll h-[calc(100vh-15rem)]">
+                <TicketInfoCard ticket={selectedTicket} />
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ) : null}
     </div>
   );
 };
