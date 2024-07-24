@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import { MdOutlineClose } from "react-icons/md";
 

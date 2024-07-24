@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import {
   Form,
   FormControl,
@@ -15,7 +15,6 @@ import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 
 import MapDialog from "@/components/map/map-dialog";
-import Map from "@/components/map/map";
 import UploadField from "@/components/upload";
 import { InputField } from "@/components/input-field";
 import { SelectField } from "@/components/select-field";
@@ -32,10 +31,24 @@ import { convertLatLngStrToArray } from "@/utils/text-formatter";
 import { useCreateWhistleblowing } from "../_hooks/useCreateWhistleblowing";
 import { GET_WHISTLEBLOWINGS } from "../_hooks/useGetWhistleblowings";
 import { createFormData } from "@/utils/form-data";
+import dynamic from "next/dynamic";
 
 type TicketFormProps = {};
 
 const TicketForm = (props: TicketFormProps) => {
+  const Map = useMemo(
+    () =>
+      dynamic(() => import("@/components/map/map"), {
+        loading: () => (
+          <div className="flex items-center justify-center w-full h-full">
+            กำลังโหลดแผนที่...
+          </div>
+        ),
+        ssr: false,
+      }),
+    []
+  );
+
   const queryClient = useQueryClient();
   const { mutate: createWhistleblowing, isPending } = useCreateWhistleblowing();
   const [openMapDialog, setOpenMapDialog] = React.useState(false);
@@ -63,6 +76,8 @@ const TicketForm = (props: TicketFormProps) => {
       isVolunteer: true,
     },
   });
+
+  const watchLatLng = form.watch("latLng");
 
   const onSubmit = async (data: any) => {
     const formData = createFormData(data);
@@ -184,12 +199,13 @@ const TicketForm = (props: TicketFormProps) => {
               </FormItem>
             )}
           />
-          {form.watch("latLng") && (
+          {watchLatLng && (
             <div className="h-[250px] w-full">
-              <Map position={convertLatLngStrToArray(form.watch("latLng"))} />
+              <Map
+                position={convertLatLngStrToArray(form.getValues("latLng"))}
+              />
             </div>
           )}
-
           <InputField
             label="บริเวณสถานที่"
             name="location"
